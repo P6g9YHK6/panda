@@ -202,12 +202,24 @@ void ignition_can_hook(CANPacket_t *msg) {
     }
   }
 
-  // TODO: this is too loose, Teslas have 0x222
-  // body v2 exception
-  // if (((msg->bus == 0U) || (msg->bus == 2U)) && (msg->addr == 0x222U)) {
-  //   ignition_can = true;
-  //   ignition_can_cnt = 0U;
-  // }
+  // Tesla Model S exception
+  if (((msg->bus == 0) || (msg->bus == 1)) && (msg->addr == 0x348U) && (len == 8)) {
+     int counter = msg->data[6] & 0xFU;
+
+     static int prev_counter_tesla_legacy = -1;
+     if ((counter == ((prev_counter_tesla_legacy + 1) % 16)) && (prev_counter_tesla_legacy != -1)) {
+       // GTW_status
+       ignition_can = (msg->data[0] & 0x1U) != 0U;
+       ignition_can_cnt = 0U;
+     }
+     prev_counter_tesla_legacy = counter;
+  }
+
+  // body exception
+  if (((msg->bus == 0U) || (msg->bus == 2U)) && (msg->addr == 0x201U)) {
+    ignition_can = true;
+    ignition_can_cnt = 0U;
+  }
 }
 
 bool can_tx_check_min_slots_free(uint32_t min) {
